@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GradPath — مسار الخريج</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:#f7f8fa;color:#1a1a2e;direction:rtl;min-height:100vh}
+.hidden{display:none!important}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-box{background:#fff;border-radius:20px;padding:36px;width:100%;max-width:400px;border:1px solid #eee}
+.auth-logo{text-align:center;font-size:28px;font-weight:700;margin-bottom:6px}
+.auth-logo span{color:#1D9E75}
+.auth-sub{text-align:center;font-size:13px;color:#888;margin-bottom:28px}
+.auth-tabs{display:flex;background:#f7f8fa;border-radius:10px;padding:4px;margin-bottom:24px;gap:4px}
+.auth-tab{flex:1;padding:8px;border:none;background:none;border-radius:8px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;color:#888;transition:all .2s}
+.auth-tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.field{margin-bottom:14px}
+.field label{font-size:12px;color:#888;display:block;margin-bottom:5px;font-weight:600}
+.field input{width:100%;border:1px solid #ddd;border-radius:10px;padding:11px 14px;font-size:14px;font-family:'Cairo',sans-serif;direction:rtl;outline:none;transition:border .2s}
+.field input:focus{border-color:#1D9E75}
+.btn-main{width:100%;background:#1a1a2e;color:#fff;border:none;padding:13px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.btn-main:hover{opacity:.88}
+.btn-main:disabled{opacity:.5;cursor:not-allowed}
+.auth-err{background:#fff0f0;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;display:none}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:100}
+.logo{font-size:20px;font-weight:700}.logo span{color:#1D9E75}
+.nav-links{display:flex;gap:4px}
+.nav-btn{background:none;border:none;padding:8px 14px;font-size:13px;font-family:'Cairo',sans-serif;color:#666;cursor:pointer;border-radius:8px;transition:all .2s}
+.nav-btn:hover{background:#f0f0f0;color:#1a1a2e}
+.nav-btn.active{color:#1a1a2e;font-weight:700;background:#f0faf6}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:#666}
+.logout-btn{background:none;border:1px solid #eee;padding:6px 12px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;color:#888}
+.logout-btn:hover{background:#fff0f0;color:#c0392b;border-color:#fcc}
+
+/* PAGES */
+.page{display:none;padding:24px;max-width:880px;margin:0 auto}
+.page.active{display:block}
+
+/* HOME */
+.hero{text-align:center;padding:44px 20px 36px;margin-bottom:28px}
+.hero h1{font-size:32px;font-weight:700;margin-bottom:10px;line-height:1.3}
+.hero h1 span{color:#1D9E75}
+.hero p{font-size:15px;color:#666;max-width:500px;margin:0 auto 24px;line-height:1.7}
+.btn-go{background:#1a1a2e;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.stat{background:#fff;border-radius:12px;padding:18px;text-align:center;border:1px solid #eee}
+.stat-n{font-size:26px;font-weight:700}
+.stat-l{font-size:12px;color:#888;margin-top:3px}
+.cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.card{background:#fff;border:1px solid #eee;border-radius:14px;padding:18px;cursor:pointer;transition:all .2s}
+.card:hover{border-color:#1D9E75;transform:translateY(-2px)}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.icon-box{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ic-teal{background:#E1F5EE;color:#0F6E56}
+.ic-blue{background:#E6F1FB;color:#185FA5}
+.ic-amber{background:#FAEEDA;color:#854F0B}
+.ic-purple{background:#EEEDFE;color:#534AB7}
+.card h3{font-size:14px;font-weight:700}
+.card p{font-size:12px;color:#666;line-height:1.6}
+.badge{display:inline-block;font-size:10px;padding:2px 9px;border-radius:20px;margin-top:6px;font-weight:700}
+.b-free{background:#E1F5EE;color:#085041}
+.b-pro{background:#EEEDFE;color:#3C3489}
+.section-title{font-size:17px;font-weight:700;margin-bottom:14px}
+
+/* CHAT */
+.chat-wrap{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden}
+.chat-header{padding:14px 18px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px}
+.ai-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.chat-title{font-size:15px;font-weight:700}
+.chat-sub{font-size:11px;color:#888;margin-right:auto}
+.chat-msgs{padding:16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:380px;overflow-y:auto}
+.msg{max-width:82%;padding:11px 15px;border-radius:14px;font-size:13px;line-height:1.6}
+.msg.ai{background:#f7f8fa;align-self:flex-start;border-bottom-right-radius:4px;border:1px solid #eee}
+.msg.user{background:#1a1a2e;color:#fff;align-self:flex-end;border-bottom-left-radius:4px}
+.msg.loading{color:#aaa;font-style:italic}
+.msg.error{background:#fff0f0;color:#c0392b;border:1px solid #fcc}
+.quick-btns{display:flex;flex-wrap:wrap;gap:7px;padding:0 16px 13px}
+.qbtn{background:#f7f8fa;border:1px solid #eee;border-radius:20px;padding:6px 13px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s}
+.qbtn:hover{background:#E1F5EE;border-color:#1D9E75;color:#0F6E56}
+.chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid #eee}
+.chat-input-row input{flex:1;border:1px solid #ddd;border-radius:20px;padding:9px 15px;font-size:13px;font-family:'Cairo',sans-serif;direction:rtl;outline:none;transition:border .2s}
+.chat-input-row input:focus{border-color:#1D9E75}
+.send-btn{width:38px;height:38px;border-radius:50%;background:#1a1a2e;border:none;color:#fff;cursor:pointer;font-size:16px;flex-shrink:0;transition:opacity .2s}
+.send-btn:hover{opacity:.85}
+.send-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* SKILLS */
+.skills-box{background:#fff;border:1px solid #eee;border-radius:14px;padding:18px;margin-bottom:18px}
+.skill-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f5f5f5}
+.skill-row:last-child{border-bottom:none}
+.skill-name{width:110px;font-size:13px;font-weight:600}
+.bar-bg{flex:1;background:#f0f0f0;border-radius:4px;height:6px;overflow:hidden}
+.bar-fill{height:100%;background:#1D9E75;border-radius:4px}
+.bar-pct{width:34px;font-size:11px;color:#888;text-align:left}
+.course-card{background:#fff;border:1px solid #eee;border-radius:14px;padding:15px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:all .2s}
+.course-card:hover{border-color:#1D9E75}
+.course-info h4{font-size:14px;font-weight:700;margin-bottom:3px}
+.course-info p{font-size:12px;color:#888}
+.pro-banner{background:linear-gradient(135deg,#EEEDFE,#dbd8ff);border-radius:14px;padding:18px;display:flex;align-items:center;gap:14px;margin-top:14px}
+.pro-banner-text h3{font-size:14px;font-weight:700;color:#26215C}
+.pro-banner-text p{font-size:12px;color:#534AB7;margin-top:2px}
+.pro-banner-btn{margin-right:auto;background:#534AB7;color:#fff;border:none;padding:9px 18px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0}
+
+/* CV */
+.cv-builder{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden}
+.cv-toolbar{padding:13px 18px;border-bottom:1px solid #eee;display:flex;gap:8px;align-items:center}
+.cv-toolbar-title{font-size:15px;font-weight:700;flex:1}
+.cv-body{display:grid;grid-template-columns:1fr 1fr}
+.cv-form{padding:18px;border-left:1px solid #eee}
+.cv-preview{padding:18px;background:#fafafa}
+.field-group{margin-bottom:12px}
+.field-group label{font-size:11px;color:#888;display:block;margin-bottom:4px;font-weight:700}
+.field-group input,.field-group textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:8px 11px;font-size:13px;font-family:'Cairo',sans-serif;color:#1a1a2e;resize:none;direction:rtl;outline:none;transition:border .2s}
+.field-group input:focus,.field-group textarea:focus{border-color:#1D9E75}
+.cv-prev-name{font-size:19px;font-weight:700;margin-bottom:2px}
+.cv-prev-job{font-size:13px;color:#888;margin-bottom:12px}
+.cv-prev-sec{font-size:10px;font-weight:700;color:#0F6E56;letter-spacing:1px;border-bottom:1.5px solid #0F6E56;padding-bottom:3px;margin-bottom:7px;margin-top:12px}
+.cv-prev-text{font-size:12px;color:#444;line-height:1.7}
+.cv-ai-btn{width:100%;background:#1D9E75;color:#fff;border:none;padding:10px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;transition:opacity .2s}
+.cv-ai-btn:hover{opacity:.88}
+.cv-ai-btn:disabled{opacity:.4;cursor:not-allowed}
+.toolbar-btn{font-size:12px;padding:7px 13px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .2s}
+.toolbar-btn:hover{background:#f0f0f0}
+.toolbar-btn.dark{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+
+/* PRO */
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.price-card{background:#fff;border:1px solid #eee;border-radius:16px;padding:22px}
+.price-card.featured{border:2px solid #534AB7}
+.price-name{font-size:17px;font-weight:700;margin-bottom:6px}
+.price-val{font-size:28px;font-weight:700;margin-bottom:14px}
+.price-features{list-style:none;font-size:13px;line-height:2.1;color:#555}
+.price-features li::before{content:"✓ ";color:#1D9E75;font-weight:700}
+.price-features li.no{color:#bbb}
+.price-features li.no::before{content:"✗ ";color:#ddd}
+.price-btn{width:100%;margin-top:14px;padding:11px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none}
+
+@media(max-width:600px){
+  .nav-links{display:none}
+  .page{padding:14px}
+  .hero h1{font-size:24px}
+  .stats-row,.cards-grid,.pricing-grid{grid-template-columns:1fr}
+  .cv-body{grid-template-columns:1fr}
+  .cv-form{border-left:none;border-bottom:1px solid #eee}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">Grad<span>Path</span></div>
+    <div class="auth-sub">منصة الخريجين للمسار المهني</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">تسجيل الدخول</button>
+      <button class="auth-tab" onclick="switchTab('signup')">حساب جديد</button>
+    </div>
+    <div id="auth-err" class="auth-err"></div>
+    <div id="login-form">
+      <div class="field"><label>الإيميل</label><input type="email" id="login-email" placeholder="example@email.com" dir="ltr"/></div>
+      <div class="field"><label>كلمة المرور</label><input type="password" id="login-pass" placeholder="••••••••" dir="ltr"/></div>
+      <button class="btn-main" onclick="doLogin()">دخول</button>
+    </div>
+    <div id="signup-form" class="hidden">
+      <div class="field"><label>الاسم</label><input type="text" id="signup-name" placeholder="اسمك الكامل"/></div>
+      <div class="field"><label>الإيميل</label><input type="email" id="signup-email" placeholder="example@email.com" dir="ltr"/></div>
+      <div class="field"><label>كلمة المرور</label><input type="password" id="signup-pass" placeholder="••••••••" dir="ltr"/></div>
+      <button class="btn-main" onclick="doSignup()">إنشاء حساب</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" class="hidden">
+  <nav class="nav">
+    <div class="logo">Grad<span>Path</span></div>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="goPage('home')">الرئيسية</button>
+      <button class="nav-btn" onclick="goPage('ai')">مساعد AI</button>
+      <button class="nav-btn" onclick="goPage('skills')">المهارات</button>
+      <button class="nav-btn" onclick="goPage('cv')">السيرة الذاتية</button>
+      <button class="nav-btn" onclick="goPage('pro')">Pro ✦</button>
+    </div>
+    <div class="user-chip">
+      <span id="user-name-chip">أهلاً</span>
+      <button class="logout-btn" onclick="doLogout()">خروج</button>
+    </div>
+  </nav>
+
+  <!-- HOME -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <h1>ابدأ مسيرتك <span>المهنية</span> بثقة</h1>
+      <p>منصة متكاملة للخريجين — اكتشف الوظائف، طور مهاراتك، وابن سيرتك الذاتية بمساعدة الذكاء الاصطناعي</p>
+      <button class="btn-go" onclick="goPage('ai')">ابدأ مع AI</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-n" style="color:#1D9E75">+2,400</div><div class="stat-l">وظيفة متاحة</div></div>
+      <div class="stat"><div class="stat-n" style="color:#185FA5">150+</div><div class="stat-l">كورس مجاني</div></div>
+      <div class="stat"><div class="stat-n" style="color:#854F0B">98%</div><div class="stat-l">رضا المستخدمين</div></div>
+    </div>
+    <div class="section-title">استكشف الخدمات</div>
+    <div class="cards-grid">
+      <div class="card" onclick="goPage('ai')"><div class="card-head"><div class="icon-box ic-teal">🤖</div><h3>مساعد وظائف AI</h3></div><p>ابحث عن وظيفة في مجالك واعرف متوسط الراتب ونسبة التوفر في السوق المصري</p><span class="badge b-free">مجاني</span></div>
+      <div class="card" onclick="goPage('skills')"><div class="card-head"><div class="icon-box ic-blue">📚</div><h3>تطوير المهارات</h3></div><p>محتوى وكورسات مخصصة حسب مجالك لتطوير المهارات المطلوبة في سوق العمل</p><span class="badge b-free">مجاني</span></div>
+      <div class="card" onclick="goPage('cv')"><div class="card-head"><div class="icon-box ic-amber">📄</div><h3>بناء CV بالـ AI</h3></div><p>أنشئ سيرة ذاتية احترافية بمساعدة الذكاء الاصطناعي وحمّلها جاهزة</p><span class="badge b-free">مجاني</span></div>
+      <div class="card" onclick="goPage('pro')"><div class="card-head"><div class="icon-box ic-purple">👑</div><h3>خطة Pro</h3></div><p>تحليل السوق المتقدم، توصيات مخصصة بالـ AI، وقوالب CV غير محدودة</p><span class="badge b-pro">مدفوع</span></div>
+    </div>
+  </div>
+
+  <!-- AI -->
+  <div id="page-ai" class="page">
+    <div class="section-title">مساعد الوظائف الذكي</div>
+    <div class="chat-wrap">
+      <div class="chat-header">
+        <div class="ai-dot"></div>
+        <div class="chat-title">GradPath AI</div>
+        <div class="chat-sub">يعمل بـ Gemini</div>
+      </div>
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="msg ai">أهلاً! أنا مساعدك الذكي لسوق العمل المصري 🇪🇬<br><br>أقدر أساعدك في:<br>• متوسط رواتب أي وظيفة<br>• نسبة توفر الوظائف في مجالك<br>• أهم المهارات المطلوبة<br>• أفضل الكورسات للتطوير<br><br>ابدأ بإخباري عن تخصصك!</div>
+      </div>
+      <div class="quick-btns">
+        <button class="qbtn" onclick="quickAsk('ايه متوسط راتب محاسب في مصر؟')">محاسب مالي</button>
+        <button class="qbtn" onclick="quickAsk('ايه متوسط راتب مهندس برمجيات في مصر؟')">مهندس برمجيات</button>
+        <button class="qbtn" onclick="quickAsk('ايه متوسط راتب متخصص تسويق رقمي في مصر؟')">تسويق رقمي</button>
+        <button class="qbtn" onclick="quickAsk('ايه متوسط راتب موارد بشرية في مصر؟')">موارد بشرية</button>
+        <button class="qbtn" onclick="quickAsk('ايه المهارات الأكثر طلباً في سوق العمل المصري؟')">مهارات مطلوبة</button>
+      </div>
+      <div class="chat-input-row">
+        <button class="send-btn" id="send-btn" onclick="sendChat()">➤</button>
+        <input type="text" id="chat-in" placeholder="اكتب مجالك أو سؤالك..." onkeydown="if(event.key==='Enter')sendChat()"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div id="page-skills" class="page">
+    <div class="section-title">خريطة مهاراتك</div>
+    <div class="skills-box">
+      <div class="skill-row"><div class="skill-name">Excel</div><div class="bar-bg"><div class="bar-fill" style="width:65%"></div></div><div class="bar-pct">65%</div></div>
+      <div class="skill-row"><div class="skill-name">SQL</div><div class="bar-bg"><div class="bar-fill" style="width:28%"></div></div><div class="bar-pct">28%</div></div>
+      <div class="skill-row"><div class="skill-name">Python</div><div class="bar-bg"><div class="bar-fill" style="width:15%"></div></div><div class="bar-pct">15%</div></div>
+      <div class="skill-row"><div class="skill-name">تحليل بيانات</div><div class="bar-bg"><div class="bar-fill" style="width:42%"></div></div><div class="bar-pct">42%</div></div>
+      <div class="skill-row"><div class="skill-name">تواصل</div><div class="bar-bg"><div class="bar-fill" style="width:75%"></div></div><div class="bar-pct">75%</div></div>
+    </div>
+    <div class="section-title">كورسات مقترحة</div>
+    <div class="course-card" onclick="window.open('https://www.coursera.org','_blank')"><div class="icon-box ic-blue" style="flex-shrink:0">📊</div><div class="course-info"><h4>تحليل البيانات مع Python</h4><p>Coursera · 4 أسابيع · مبتدئ <span class="badge b-free">مجاني</span></p></div></div>
+    <div class="course-card" onclick="window.open('https://www.udemy.com','_blank')"><div class="icon-box ic-teal" style="flex-shrink:0">🗄️</div><div class="course-info"><h4>SQL من الصفر للاحتراف</h4><p>Udemy · 3 أسابيع · مبتدئ <span class="badge b-free">مجاني</span></p></div></div>
+    <div class="course-card" onclick="window.open('https://www.linkedin.com/learning','_blank')"><div class="icon-box ic-amber" style="flex-shrink:0">💼</div><div class="course-info"><h4>مهارات العمل الاحترافية</h4><p>LinkedIn Learning · أسبوعين <span class="badge b-free">مجاني</span></p></div></div>
+    <div class="pro-banner"><div class="pro-banner-text"><h3>احصل على خطة تعلم مخصصة كاملة بالـ AI</h3><p>AI يحلل مهاراتك ويبني لك مسار تعلم شخصي</p></div><button class="pro-banner-btn" onclick="goPage('pro')">اشترك في Pro</button></div>
+  </div>
+
+  <!-- CV -->
+  <div id="page-cv" class="page">
+    <div class="section-title">بناء السيرة الذاتية</div>
+    <div class="cv-builder">
+      <div class="cv-toolbar">
+        <span class="cv-toolbar-title">محرر CV</span>
+        <button class="toolbar-btn" onclick="updatePreview()">🔄 تحديث</button>
+        <button class="toolbar-btn dark" onclick="printCV()">⬇ تحميل PDF</button>
+      </div>
+      <div class="cv-body">
+        <div class="cv-form">
+          <div class="field-group"><label>الاسم الكامل</label><input type="text" id="cv-name" placeholder="اسمك الكامل" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>المسمى الوظيفي</label><input type="text" id="cv-title" placeholder="مثال: محلل بيانات" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>الإيميل</label><input type="text" id="cv-email" placeholder="email@example.com" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>رقم الموبايل</label><input type="text" id="cv-phone" placeholder="01000000000" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>الملخص المهني</label><textarea rows="3" id="cv-summary" placeholder="اكتب ملخصاً عن نفسك..." oninput="updatePreview()"></textarea></div>
+          <div class="field-group"><label>المهارات (مفصولة بفاصلة)</label><input type="text" id="cv-skills" placeholder="Excel, SQL, Python" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>التعليم</label><input type="text" id="cv-edu" placeholder="بكالوريوس ... - جامعة ... 2024" oninput="updatePreview()"/></div>
+          <div class="field-group"><label>الخبرات</label><textarea rows="2" id="cv-exp" placeholder="تدريب صيفي في..." oninput="updatePreview()"></textarea></div>
+          <button class="cv-ai-btn" id="cv-ai-btn" onclick="improveCV()">✨ حسّن الملخص بالـ AI</button>
+        </div>
+        <div id="cv-preview" class="cv-preview">
+          <div style="color:#bbb;text-align:center;margin-top:60px;font-size:13px">ابدأ بكتابة بياناتك على اليسار وهتظهر هنا</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRO -->
+  <div id="page-pro" class="page">
+    <div class="section-title">خطط الاشتراك</div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-name">مجاني</div>
+        <div class="price-val" style="color:#1D9E75">0 جنيه</div>
+        <ul class="price-features">
+          <li>مساعد AI للوظائف</li>
+          <li>كورسات مجانية</li>
+          <li>بناء CV أساسي</li>
+          <li class="no">تحليل متقدم للسوق</li>
+          <li class="no">خطة تعلم مخصصة</li>
+          <li class="no">5 قوالب CV احترافية</li>
+        </ul>
+        <button class="price-btn" style="background:#f0f0f0;color:#1a1a2e" onclick="goPage('home')">ابدأ مجاناً</button>
+      </div>
+      <div class="price-card featured">
+        <div style="background:#EEEDFE;color:#3C3489;font-size:11px;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:8px;font-weight:700">⭐ الأكثر شيوعاً</div>
+        <div class="price-name">Pro شهري</div>
+        <div class="price-val" style="color:#534AB7">99 جنيه<span style="font-size:13px;font-weight:400;color:#888"> / شهر</span></div>
+        <ul class="price-features">
+          <li>كل مميزات المجاني</li>
+          <li>تحليل سوق العمل الكامل</li>
+          <li>5 قوالب CV احترافية</li>
+          <li>خطة تعلم مخصصة AI</li>
+          <li>تحسين CV بالـ AI</li>
+          <li>دعم أولوية</li>
+        </ul>
+        <button class="price-btn" style="background:#534AB7;color:#fff">اشترك الآن — قريباً</button>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #eee;border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">💳 طرق الدفع المتاحة قريباً</div>
+      <div style="font-size:13px;color:#888">Vodafone Cash · فوري · بطاقة بنكية</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======= FIREBASE CONFIG =======
+const firebaseConfig = {
+  apiKey: "AIzaSyDjP01JXdWrYbVVEGYEqx4W2YlbaT1FWk8",
+  authDomain: "gradpath-c90db.firebaseapp.com",
+  projectId: "gradpath-c90db",
+  storageBucket: "gradpath-c90db.firebasestorage.app",
+  messagingSenderId: "612751234309",
+  appId: "1:612751234309:web:26bcc4077d22087e07136c",
+  measurementId: "G-HQ1KD9GLFG"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ======= GEMINI KEY =======
+const GEMINI_KEY = "AQ.Ab8RN6Imaa54DK5ePv2D0l2I6MeyFE4MTYqDPEdoN6tVjHGM8g";
+
+// ======= AUTH =======
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('user-name-chip').textContent = 'أهلاً، ' + (user.displayName || user.email.split('@')[0]);
+  } else {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('main-app').classList.add('hidden');
+  }
+});
+
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='signup'&&i===1)));
+  document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('signup-form').classList.toggle('hidden', tab !== 'signup');
+  document.getElementById('auth-err').style.display = 'none';
+}
+
+function showErr(msg) {
+  const el = document.getElementById('auth-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if (!email || !pass) return showErr('من فضلك أدخل الإيميل وكلمة المرور');
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    const msgs = {'auth/user-not-found':'الحساب غير موجود','auth/wrong-password':'كلمة المرور غلط','auth/invalid-email':'الإيميل غير صحيح','auth/invalid-credential':'الإيميل أو كلمة المرور غلط'};
+    showErr(msgs[e.code] || e.message || e.code);
+  }
+}
+
+async function doSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-pass').value;
+  if (!name || !email || !pass) return showErr('من فضلك اكمل كل البيانات');
+  if (pass.length < 6) return showErr('كلمة المرور لازم تكون 6 أحرف على الأقل');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({displayName: name});
+    await db.collection('users').doc(cred.user.uid).set({name, email, createdAt: new Date()});
+  } catch(e) {
+    const msgs = {'auth/email-already-in-use':'الإيميل ده موجود بالفعل','auth/invalid-email':'الإيميل غير صحيح','auth/weak-password':'كلمة المرور ضعيفة'};
+    showErr(msgs[e.code] || e.message || e.code);
+  }
+}
+
+function doLogout() { auth.signOut(); }
+
+// ======= NAVIGATION =======
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const map = {home:0,ai:1,skills:2,cv:3,pro:4};
+  if (map[name] !== undefined) document.querySelectorAll('.nav-btn')[map[name]].classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ======= AI CHAT =======
+let isLoading = false;
+function addMsg(text, type) {
+  const msgs = document.getElementById('chat-msgs');
+  const d = document.createElement('div');
+  d.className = 'msg ' + type;
+  d.innerHTML = text.replace(/\n/g,'<br>');
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+async function sendChat() {
+  if (isLoading) return;
+  const inp = document.getElementById('chat-in');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  addMsg(text, 'user');
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  const loading = addMsg('جاري البحث في بيانات السوق...', 'ai loading');
+  try {
+    const systemPrompt = `أنت مساعد ذكي متخصص في سوق العمل المصري. مهمتك مساعدة الخريجين الجدد في:
+- معرفة متوسط الرواتب في مختلف المجالات في مصر
+- نسبة توفر الوظائف في كل مجال
+- المهارات الأكثر طلباً
+- أفضل الكورسات للتطوير
+- نصائح عملية للمسيرة المهنية
+أجب دائماً بالعربية بشكل واضح ومختصر ومفيد مع أرقام واقعية عن السوق المصري.`;
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:systemPrompt+'\n\nسؤال: '+text}]}]})
+    });
+    const data = await res.json();
+    loading.remove();
+    if (data.candidates?.[0]) {
+      addMsg(data.candidates[0].content.parts[0].text, 'ai');
+    } else {
+      addMsg('❌ في مشكلة في الاتصال بالـ AI، حاول تاني', 'error');
+    }
+  } catch(e) {
+    loading.remove();
+    addMsg('❌ في مشكلة في الاتصال، تحقق من الانترنت', 'error');
+  }
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function quickAsk(q) {
+  document.getElementById('chat-in').value = q;
+  sendChat();
+}
+
+// ======= CV =======
+function updatePreview() {
+  const name = document.getElementById('cv-name').value || '';
+  const title = document.getElementById('cv-title').value || '';
+  const email = document.getElementById('cv-email').value || '';
+  const phone = document.getElementById('cv-phone').value || '';
+  const summary = document.getElementById('cv-summary').value || '';
+  const skills = document.getElementById('cv-skills').value || '';
+  const edu = document.getElementById('cv-edu').value || '';
+  const exp = document.getElementById('cv-exp').value || '';
+  if (!name && !title && !summary) { document.getElementById('cv-preview').innerHTML = '<div style="color:#bbb;text-align:center;margin-top:60px;font-size:13px">ابدأ بكتابة بياناتك على اليسار وهتظهر هنا</div>'; return; }
+  const skillList = skills.split(',').filter(s=>s.trim()).map(s=>s.trim()).join(' · ');
+  document.getElementById('cv-preview').innerHTML = `
+    <div class="cv-prev-name">${name}</div>
+    <div class="cv-prev-job">${title}</div>
+    ${(email||phone)?`<div style="font-size:11px;color:#888;margin-bottom:10px">${[email,phone].filter(Boolean).join(' · ')}</div>`:''}
+    ${summary?`<div class="cv-prev-sec">الملخص المهني</div><div class="cv-prev-text">${summary}</div>`:''}
+    ${skillList?`<div class="cv-prev-sec">المهارات</div><div class="cv-prev-text">${skillList}</div>`:''}
+    ${edu?`<div class="cv-prev-sec">التعليم</div><div class="cv-prev-text">${edu}</div>`:''}
+    ${exp?`<div class="cv-prev-sec">الخبرات</div><div class="cv-prev-text">${exp}</div>`:''}
+  `;
+}
+
+async function improveCV() {
+  const btn = document.getElementById('cv-ai-btn');
+  btn.disabled = true; btn.textContent = 'جاري التحسين...';
+  const name = document.getElementById('cv-name').value;
+  const title = document.getElementById('cv-title').value;
+  const summary = document.getElementById('cv-summary').value;
+  const skills = document.getElementById('cv-skills').value;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:`حسّن الملخص المهني التالي لخريج جديد باللغة العربية بشكل احترافي في 3 جمل فقط:\nالاسم: ${name}\nالمسمى: ${title}\nالملخص الحالي: ${summary}\nالمهارات: ${skills}\nأعطني الملخص المحسن فقط بدون أي مقدمة.`}]}]})
+    });
+    const data = await res.json();
+    if (data.candidates?.[0]) {
+      document.getElementById('cv-summary').value = data.candidates[0].content.parts[0].text.trim();
+      updatePreview();
+    }
+  } catch(e) { alert('في مشكلة في الاتصال'); }
+  btn.disabled = false; btn.textContent = '✨ حسّن الملخص بالـ AI';
+}
+
+function printCV() {
+  const preview = document.getElementById('cv-preview').innerHTML;
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>CV</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"><style>body{font-family:'Cairo',sans-serif;padding:40px;max-width:700px;margin:0 auto;color:#1a1a2e}.cv-prev-name{font-size:22px;font-weight:700;margin-bottom:3px}.cv-prev-job{font-size:13px;color:#888;margin-bottom:12px}.cv-prev-sec{font-size:10px;font-weight:700;color:#0F6E56;letter-spacing:1px;border-bottom:1.5px solid #0F6E56;padding-bottom:3px;margin-bottom:7px;margin-top:14px}.cv-prev-text{font-size:12px;color:#444;line-height:1.7}</style></head><body>${preview}</body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),500);
+}
+</script>
+</body>
+</html>
